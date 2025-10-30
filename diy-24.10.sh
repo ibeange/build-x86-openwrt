@@ -233,8 +233,30 @@ destination_dir="package/A"
 color cy "添加&替换插件"
 
 # 修改主机名字，修改你喜欢的就行（不能纯数字或者使用中文）
-sed -i "/uci commit system/i\uci set system.@system[0].hostname='EthanWRT'" package/emortal/default-settings/files/99-default-settings
-sed -i "s/hostname='.*'/hostname='EthanWRT'/g" ./package/base-files/files/bin/config_generate
+sed -i "s,hostname='ImmortalWrt',hostname='EthanWrt',g" package/base-files/files/bin/config_generate
+
+# 修改主题多余版本信息
+sed -i 's|<a class="luci-link" href="https://github.com/openwrt/luci"|<a|g' feeds/luci/themes/luci-theme-argon/luasrc/view/themes/argon/footer.htm
+sed -i 's|<a class="luci-link" href="https://github.com/openwrt/luci"|<a|g' feeds/luci/themes/luci-theme-argon/luasrc/view/themes/argon/footer_login.htm
+sed -i 's|<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">|<a>|g' feeds/luci/themes/luci-theme-argon/luasrc/view/themes/argon/footer.htm
+sed -i 's|<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">|<a>|g' feeds/luci/themes/luci-theme-argon/luasrc/view/themes/argon/footer_login.htm
+
+# 显示增加编译时间
+if [ "${REPO_BRANCH#*-}" = "23.05" ]; then
+   sed -i "s/DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION=\"ImmortalWrt R$(TZ=UTC-8 date +'%y.%-m.%-d') (By @Jejz build $(TZ=UTC-8 date '+%Y-%m-%d %H:%M'))\"/g" package/base-files/files/etc/openwrt_release
+   echo -e "\e[41m当前写入的编译时间:\e[0m \e[33m$(grep 'DISTRIB_DESCRIPTION' package/base-files/files/etc/openwrt_release)\e[0m"
+else
+   sed -i "s/DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION=\"ImmortalWrt By @Ethan\"/g" package/base-files/files/etc/openwrt_release
+   sed -i "s/OPENWRT_RELEASE=.*/OPENWRT_RELEASE=\"ImmortalWrt R$(TZ=UTC-8 date +'%y.%-m.%-d') (By @Ethan build $(TZ=UTC-8 date '+%Y-%m-%d %H:%M'))\"/g" package/base-files/files/usr/lib/os-release
+   echo -e "\e[41m当前写入的编译时间:\e[0m \e[33m$(grep 'OPENWRT_RELEASE' package/base-files/files/usr/lib/os-release)\e[0m"
+fi
+
+# 修改欢迎banner
+cp -f $GITHUB_WORKSPACE/diy_script/immo_diy/x86/99-default-settings package/emortal/default-settings/files/99-default-settings
+# cp -f $GITHUB_WORKSPACE/personal/banner-immo package/base-files/files/etc/banner
+# wget -O ./package/base-files/files/etc/banner https://raw.githubusercontent.com/Jejz168/OpenWrt/main/personal/banner
+sed -i "/%D/a \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ [31m By @Ethan build $(TZ=UTC-8 date '+%Y.%m.%d') [0m" package/base-files/files/etc/banner
+cat package/base-files/files/etc/banner
 
 # 添加额外插件
 # clone_dir openwrt-23.05 https://github.com/coolsnowwolf/luci luci-app-adguardhome
@@ -256,7 +278,10 @@ clone_all https://github.com/brvphoenix/wrtbwmon
 # ddns-go 动态域名
 clone_all https://github.com/sirpdboy/luci-app-ddns-go
 
-git clone --depth 1 https://github.com/sirpdboy/luci-app-poweroffdevice package/luci-app-poweroffdevice
+clone_all https://github.com/sirpdboy/luci-app-poweroffdevice
+
+# luci-app-filemanager
+git_clone https://github.com/sbwml/luci-app-filemanager luci-app-filemanager
 
 # 科学上网插件
 # clone_all https://github.com/fw876/helloworld
@@ -265,6 +290,8 @@ git clone --depth 1 https://github.com/sirpdboy/luci-app-poweroffdevice package/
 # clone_all https://github.com/xiaorouji/openwrt-passwall2
 clone_dir https://github.com/vernesong/OpenClash luci-app-openclash
 # clone_dir https://github.com/sbwml/openwrt_helloworld shadowsocks-rust
+
+git_clone  https://github.com/liwenjie119/luci-app-v2ray-server package/luci-app-v2ray-server luci-app-v2ray-server
 
 # Themes
 git_clone https://github.com/kiddin9/luci-theme-edge
@@ -309,11 +336,18 @@ cp -f $GITHUB_WORKSPACE/images/bg1.jpg feeds/luci/themes/luci-theme-argon/htdocs
 # 调整 netdata 到 状态 菜单
 sed -i 's/system/status/g' feeds/luci/applications/luci-app-netdata/luasrc/controller/netdata.lua
 
+# 重命名
+sed -i 's,UPnP IGD 和 PCP,UPnP,g' feeds/luci/applications/luci-app-upnp/po/zh_Hans/upnp.po
+# 精简 UPnP 菜单名称
+sed -i 's#\"title\": \"UPnP IGD \& PCP/NAT-PMP\"#\"title\": \"UPnP\"#g' feeds/luci/applications/luci-app-upnp/root/usr/share/luci/menu.d/luci-app-upnp.json
+
 # 更改 ttyd 顺序和名称
 sed -i '3a \		"order": 10,' feeds/luci/applications/luci-app-ttyd/root/usr/share/luci/menu.d/luci-app-ttyd.json
 sed -i 's/\"终端\"/\"TTYD 终端\"/g' feeds/luci/applications/luci-app-ttyd/po/zh_Hans/ttyd.po
 
 # 设置 nlbwmon 独立菜单
+sed -i 's/524288/16777216/g' feeds/packages/net/nlbwmon/files/nlbwmon.config
+sed -i 's/option commit_interval.*/option commit_interval 24h/g' feeds/packages/net/nlbwmon/files/nlbwmon.config
 sed -i 's/services\/nlbw/nlbw/g; /path/s/admin\///g' feeds/luci/applications/luci-app-nlbwmon/root/usr/share/luci/menu.d/luci-app-nlbwmon.json
 sed -i 's/services\///g' feeds/luci/applications/luci-app-nlbwmon/htdocs/luci-static/resources/view/nlbw/config.js
 
