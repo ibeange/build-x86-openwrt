@@ -239,7 +239,7 @@ sed -i "s/hostname='.*'/hostname='EthanWRT'/g" ./package/base-files/files/bin/co
 # 添加额外插件
 # clone_dir openwrt-23.05 https://github.com/coolsnowwolf/luci luci-app-adguardhome
 # git_clone https://github.com/immortalwrt/homeproxy luci-app-homeproxy
-clone_all https://github.com/nikkinikki-org/OpenWrt-nikki
+# clone_all https://github.com/nikkinikki-org/OpenWrt-nikki
 # clone_all https://github.com/nikkinikki-org/OpenWrt-momo
 # clone_dir https://github.com/QiuSimons/luci-app-daed daed luci-app-daed
 
@@ -321,7 +321,7 @@ sed -i 's/services\///g' feeds/luci/applications/luci-app-nlbwmon/htdocs/luci-st
 sed -i 's/${g}.*/${a}${b}${c}${d}${e}${f}${hydrid}/g' package/emortal/autocore/files/x86/autocore
 
 # 修改版本号
-sed -i "s|DISTRIB_REVISION='.*'|DISTRIB_REVISION='R$(date +%y.%m.%d)'|g" package/emortal/default-settings/files/99-default-settings
+sed -i "s|DISTRIB_REVISION='.*'|DISTRIB_REVISION='R$(date +%y.%m.%d)'|g" package/base-files/files/etc/openwrt_release
 
 # 设置ttyd免帐号登录
 sed -i 's/\/bin\/login/\/bin\/login -f root/' feeds/packages/utils/ttyd/files/ttyd.config
@@ -339,8 +339,8 @@ sed -i '$a net.core.rmem_max=16777216' package/base-files/files/etc/sysctl.conf
 # 修改版本为编译日期
 # date_version=$(date +"%y.%m.%d")
 # orig_version=$(cat "package/lean/default-settings/files/zzz-default-settings" | grep DISTRIB_REVISION= | awk -F "'" '{print $2}')
-sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='EthanWRT'/g" package/emortal/default-settings/files/99-default-settings   
-sed -i "s/DISTRIB_REVISION='*.*'/DISTRIB_REVISION=' By Ethan'/g" package/emortal/default-settings/files/99-default-settings
+sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='EthanWRT'/g"package/base-files/files/etc/openwrt_release
+sed -i "s/DISTRIB_REVISION='*.*'/DISTRIB_REVISION=' By Ethan'/g" package/base-files/files/etc/openwrt_release
 
 # 添加编译日期
 echo "DISTRIB_DATE='R$(date +%y.%-m.%-d)'" >>package/base-files/files/etc/openwrt_release
