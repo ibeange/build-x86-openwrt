@@ -279,7 +279,7 @@ clone_all https://github.com/sirpdboy/luci-app-poweroffdevice
 git_clone https://github.com/sbwml/luci-app-filemanager luci-app-filemanager
 
 # 【<--- 新增】 添加 Turbo ACC 网络加速
-git_clone https://github.com/kiddin9/kwrt-packages luci-app-turboacc
+# git_clone https://github.com/kiddin9/kwrt-packages luci-app-turboacc
 
 # 科学上网插件
 clone_all https://github.com/nikkinikki-org/OpenWrt-nikki
