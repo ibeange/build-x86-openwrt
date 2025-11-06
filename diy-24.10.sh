@@ -230,15 +230,6 @@ status "更新&安装插件"
 destination_dir="package/A"
 [ -d $destination_dir ] || mkdir -p $destination_dir
 
-
-# 确保 /files/etc 目录存在
-mkdir -p files/etc/
-
-# 覆盖或创建一个空的 firewall.user 文件
-# 这将清除任何可能存在的旧 iptables 规则，从根本上解决 fw4 警告
-echo "# This file is intentionally left blank by the build script." > files/etc/firewall.user
-echo "Cleaned files/etc/firewall.user to prevent fw4 legacy warnings."
-
 # 强制禁用旧版 firewall (fw3)
 sed -i 's/CONFIG_PACKAGE_firewall=y/# CONFIG_PACKAGE_firewall is not set/g' .config
 
@@ -247,7 +238,7 @@ sed -i 's/CONFIG_PACKAGE_firewall=y/# CONFIG_PACKAGE_firewall is not set/g' .con
 sed -i '/CONFIG_PACKAGE_firewall4/d' .config
 echo "CONFIG_PACKAGE_firewall4=y" >> .config
 
-# 确保 LuCI 防火墙应用被选中 (它会自动适配 fw4)
+# D 确保 LuCI 防火墙应用被选中 (它会自动适配 fw4)
 sed -i '/CONFIG_PACKAGE_luci-app-firewall/d' .config
 echo "CONFIG_PACKAGE_luci-app-firewall=y" >> .config
 
@@ -270,7 +261,7 @@ fi
 echo
 TIME y "更换golang版本"
 rm -rf feeds/packages/lang/golang
-git clone https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
+git clone https://github.com/sbwml/packages_lang_golang -b 24.x feeds/packages/lang/golang
 
 # 添加额外插件
 clone_all https://github.com/sbwml/luci-app-openlist2
@@ -287,6 +278,9 @@ clone_all https://github.com/sirpdboy/luci-app-poweroffdevice
 # luci-app-filemanager
 git_clone https://github.com/sbwml/luci-app-filemanager luci-app-filemanager
 
+# 【<--- 新增】 添加 Turbo ACC 网络加速
+git_clone https://github.com/kiddin9/kwrt-packages luci-app-turboacc
+
 # 科学上网插件
 clone_all https://github.com/nikkinikki-org/OpenWrt-nikki
 clone_dir https://github.com/vernesong/OpenClash luci-app-openclash
@@ -302,6 +296,17 @@ git_clone https://github.com/jerrykuku/luci-app-argon-config
 begin_time=$(date '+%H:%M:%S')
 
 [ -e $GITHUB_WORKSPACE/files ] && mv $GITHUB_WORKSPACE/files files
+
+# ==============================================================
+# 调整：将防火墙清理移动到这里
+# 确保 /files/etc 目录存在
+mkdir -p files/etc/
+
+# 覆盖或创建一个空的 firewall.user 文件
+# 这将清除任何可能存在的旧 iptables 规则，从根本上解决 fw4 警告
+echo "# This file is intentionally left blank by the build script." > files/etc/firewall.user
+echo "Cleaned files/etc/firewall.user to prevent fw4 legacy warnings."
+# ==============================================================
 
 # 设置固件rootfs大小
 if [ $PART_SIZE ]; then
@@ -338,8 +343,11 @@ sed -i 's/("OpenClash"), 50)/("OpenClash"), -10)/g' feeds/luci/applications/luci
 sed -i 's/"网络存储"/"存储"/g' `grep "网络存储" -rl ./`
 sed -i 's/"软件包"/"软件管理"/g' `grep "软件包" -rl ./`
 
-# 调整 netdata 到 状态 菜单
-sed -i 's/system/status/g' feeds/luci/applications/luci-app-netdata/luasrc/controller/netdata.lua
+# 【<--- 新增】 移动 OpenList2 到 "网络存储" (nas) 菜单
+# 注意: 你的 clone_all 默认会把它放在 package/A 目录下
+if [ -f "package/A/luci-app-openlist2/luasrc/controller/openlist2.lua" ]; then
+    sed -i 's/{"admin", "services", "openlist2"}/{"admin", "nas", "openlist2"}/g' package/A/luci-app-openlist2/luasrc/controller/openlist2.lua
+fi
 
 # 重命名
 sed -i 's,UPnP IGD 和 PCP,UPnP,g' feeds/luci/applications/luci-app-upnp/po/zh_Hans/upnp.po
@@ -351,6 +359,10 @@ find ./feeds ./package -path "*luci-app-netdata/luasrc/controller/netdata.lua" -
 # 2. 查找所有匹配的 netdata.lua 文件，并重命名为 "实时监控"
 find ./feeds ./package -path "*luci-app-netdata/luasrc/controller/netdata.lua" -exec sed -i \
     's/_("Netdata")/_("实时监控")/g' {} +
+    
+# 3. 【优化】为 "实时监控" 菜单设置一个排序（例如 60，使其在“状态”菜单中位置靠前）
+find ./feeds ./package -path "*luci-app-netdata/luasrc/controller/netdata.lua" -exec sed -i \
+    's/"netdata")/"netdata"), 60/g' {} +
 
 echo             
 TIME b "插件 重命名..."
@@ -367,7 +379,10 @@ sed -i 's/"挂载点"/"挂载路径"/g' feeds/luci/modules/luci-base/po/zh_Hans/
 sed -i 's/"启动项"/"启动管理"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
 sed -i 's/"软件包"/"软件管理"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
 
-sed -i 's/"Argon 主题设置"/"主题设置"/g' package/waynesg/luci-app-argon-config/po/zh_Hans/argon-config.po
+# 【<--- 修改】 修正 Argon-config 重命名的路径
+if [ -f "package/A/luci-app-argon-config/po/zh_Hans/argon-config.po" ]; then
+    sed -i 's/"Argon 主题设置"/"主题设置"/g' package/A/luci-app-argon-config/po/zh_Hans/argon-config.po
+fi
 
 # 精简 UPnP 菜单名称
 sed -i 's#\"title\": \"UPnP IGD \& PCP/NAT-PMP\"#\"title\": \"UPnP服务\"#g' feeds/luci/applications/luci-app-upnp/root/usr/share/luci/menu.d/luci-app-upnp.json
@@ -388,14 +403,14 @@ echo "重命名网络菜单"
 sed -i 's/"接口"/"网络接口"/g' `grep "接口" -rl ./`
 #sed -i 's/"Socat"/"端口转发"/g'  package/waynesg/luci-app-socat/luasrc/controller/socat.lua
 sed -i 's/DHCP\/DNS/DNS设定/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
-sed -i 's|/services/|/network/|' feeds/luci/applications/luci-app-upnp/root/usr/share/luci/menu.d/luci-app-upnp.json
+
+# 【<--- 删除】 下面这行被注释掉了，以确保 UPnP 留在“服务”菜单
+# sed -i 's|/services/|/network/|' feeds/luci/applications/luci-app-upnp/root/usr/share/luci/menu.d/luci-app-upnp.json
+
 sed -i 's/"Bandix 流量监控"/"流量监控"/g' package/waynesg/luci-app-bandix/luci-app-bandix/po/zh_Hans/bandix.po
 
 # x86 型号只显示 CPU 型号
 sed -i 's/${g}.*/${a}${b}${c}${d}${e}${f}${hydrid}/g' package/emortal/autocore/files/x86/autocore
-
-# 设置ttyd免帐号登录
-sed -i 's/\/bin\/login/\/bin\/login -f root/' feeds/packages/utils/ttyd/files/ttyd.config
 
 # 最大连接数修改为65535
 sed -i '$a net.netfilter.nf_conntrack_max=65535' package/base-files/files/etc/sysctl.conf
@@ -407,17 +422,12 @@ sed -i 's/os.date()/os.date("%a %Y-%m-%d %H:%M:%S")/g' package/emortal/autocore/
 sed -i '$a net.core.wmem_max=16777216' package/base-files/files/etc/sysctl.conf
 sed -i '$a net.core.rmem_max=16777216' package/base-files/files/etc/sysctl.conf
 
-# 修改版本为编译日期
-# date_version=$(date +"%y.%m.%d")
-# orig_version=$(cat "package/lean/default-settings/files/zzz-default-settings" | grep DISTRIB_REVISION= | awk -F "'" '{print $2}')
-sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='EthanWRT'/g"package/base-files/files/etc/openwrt_release
-sed -i "s/DISTRIB_REVISION='*.*'/DISTRIB_REVISION=' By Ethan'/g" package/base-files/files/etc/openwrt_release
-
-
-# 调整 V2ray服务器 到 VPN 菜单
-sed -i 's/services/vpn/g' feeds/luci/applications/luci-app-v2ray-server/luasrc/controller/*.lua
-sed -i 's/services/vpn/g' feeds/luci/applications/luci-app-v2ray-server/luasrc/model/cbi/v2ray_server/*.lua
-sed -i 's/services/vpn/g' feeds/luci/applications/luci-app-v2ray-server/luasrc/view/v2ray_server/*.htm
+# 【<--- 修改】 调整 V2ray服务器 到 VPN 菜单 (修正路径)
+if [ -d "package/A/luci-app-v2ray-server" ]; then
+    sed -i 's/services/vpn/g' package/A/luci-app-v2ray-server/luasrc/controller/*.lua
+    sed -i 's/services/vpn/g' package/A/luci-app-v2ray-server/luasrc/model/cbi/v2ray_server/*.lua
+    sed -i 's/services/vpn/g' package/A/luci-app-v2ray-server/luasrc/view/v2ray_server/*.htm
+fi
 
 # 修复 Makefile 路径
 find $destination_dir/*/ -maxdepth 2 -path "*/Makefile" | xargs -i sed -i \
