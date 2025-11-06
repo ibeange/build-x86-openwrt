@@ -230,18 +230,30 @@ status "更新&安装插件"
 destination_dir="package/A"
 [ -d $destination_dir ] || mkdir -p $destination_dir
 
+
+# 确保 /files/etc 目录存在
+mkdir -p files/etc/
+
+# 覆盖或创建一个空的 firewall.user 文件
+# 这将清除任何可能存在的旧 iptables 规则，从根本上解决 fw4 警告
+echo "# This file is intentionally left blank by the build script." > files/etc/firewall.user
+echo "Cleaned files/etc/firewall.user to prevent fw4 legacy warnings."
+
+# 强制禁用旧版 firewall (fw3)
+sed -i 's/CONFIG_PACKAGE_firewall=y/# CONFIG_PACKAGE_firewall is not set/g' .config
+
+# 强制启用新版 firewall4 (fw4)
+# (先删除旧的设置行，再确保它是y)
+sed -i '/CONFIG_PACKAGE_firewall4/d' .config
+echo "CONFIG_PACKAGE_firewall4=y" >> .config
+
+# 确保 LuCI 防火墙应用被选中 (它会自动适配 fw4)
+sed -i '/CONFIG_PACKAGE_luci-app-firewall/d' .config
+echo "CONFIG_PACKAGE_luci-app-firewall=y" >> .config
+
 color cy "添加&替换插件"
 
-echo 
-TIME y "自定义固件版本名字"
-sed -i "/^\. \/etc\/openwrt_release/a\\
-sed -i '/DISTRIB_REVISION/d' /etc/openwrt_release\n\
-echo \"DISTRIB_REVISION='v\$(date +'%Y.%m.%d')'\" >> /etc/openwrt_release\n\
-sed -i '/DISTRIB_RELEASE/d' /etc/openwrt_release\n\
-echo \"DISTRIB_RELEASE='v\$(date +'%Y.%m.%d')'\" >> /etc/openwrt_release\n\
-sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release\n\
-echo \"DISTRIB_DESCRIPTION='ImmortalWrt By @Ethan Build \$(TZ=UTC-8 date \"+%Y.%m.%d\") '\" >> /etc/openwrt_release
-" package/emortal/default-settings/files/99-default-settings
+sed -i "s/ImmortalWrt 24.10-SNAPSHOT.*/EthanWRT R$(TZ=UTC-8 date +'%y.%-m.%-d')/g" package/base-files/files/etc/banner
 
 curl -fsSL "https://raw.githubusercontent.com/waynesg/scripts/refs/heads/main/others/01_sysinfo" -o "target/linux/x86/base-files/lib/preinit/01_sysinfo"
 
@@ -332,6 +344,13 @@ sed -i 's/system/status/g' feeds/luci/applications/luci-app-netdata/luasrc/contr
 # 重命名
 sed -i 's,UPnP IGD 和 PCP,UPnP,g' feeds/luci/applications/luci-app-upnp/po/zh_Hans/upnp.po
 
+# 1. 查找所有匹配的 netdata.lua 文件，并将菜单从 "服务" 移动到 "状态"
+find ./feeds ./package -path "*luci-app-netdata/luasrc/controller/netdata.lua" -exec sed -i \
+    's/{"admin", "services", "netdata"}/{"admin", "status", "netdata"}/g' {} +
+
+# 2. 查找所有匹配的 netdata.lua 文件，并重命名为 "实时监控"
+find ./feeds ./package -path "*luci-app-netdata/luasrc/controller/netdata.lua" -exec sed -i \
+    's/_("Netdata")/_("实时监控")/g' {} +
 
 echo             
 TIME b "插件 重命名..."
@@ -339,7 +358,6 @@ echo "重命名系统菜单"
 #status menu
 sed -i 's/"概览"/"系统概览"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
 sed -i 's/"路由"/"路由映射"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
-sed -i 's/"在线用户"/"在线设备"/g' package/waynesg/luci-app-onliner/luasrc/controller/onliner.lua
 #system menu
 #sed -i 's/"系统"/"系统设置"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
 sed -i 's/"管理权"/"权限管理"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
@@ -376,9 +394,6 @@ sed -i 's/"Bandix 流量监控"/"流量监控"/g' package/waynesg/luci-app-bandi
 # x86 型号只显示 CPU 型号
 sed -i 's/${g}.*/${a}${b}${c}${d}${e}${f}${hydrid}/g' package/emortal/autocore/files/x86/autocore
 
-# 修改版本号
-sed -i "s|DISTRIB_REVISION='.*'|DISTRIB_REVISION='R$(date +%y.%m.%d)'|g" package/base-files/files/etc/openwrt_release
-
 # 设置ttyd免帐号登录
 sed -i 's/\/bin\/login/\/bin\/login -f root/' feeds/packages/utils/ttyd/files/ttyd.config
 
@@ -398,8 +413,6 @@ sed -i '$a net.core.rmem_max=16777216' package/base-files/files/etc/sysctl.conf
 sed -i "s/DISTRIB_DESCRIPTION='*.*'/DISTRIB_DESCRIPTION='EthanWRT'/g"package/base-files/files/etc/openwrt_release
 sed -i "s/DISTRIB_REVISION='*.*'/DISTRIB_REVISION=' By Ethan'/g" package/base-files/files/etc/openwrt_release
 
-# 添加编译日期
-echo "DISTRIB_DATE='R$(date +%y.%-m.%-d)'" >>package/base-files/files/etc/openwrt_release
 
 # 调整 V2ray服务器 到 VPN 菜单
 sed -i 's/services/vpn/g' feeds/luci/applications/luci-app-v2ray-server/luasrc/controller/*.lua
