@@ -226,42 +226,15 @@ begin_time=$(date '+%H:%M:%S')
 ./scripts/feeds install -a 1>/dev/null 2>&1
 status "更新&安装插件"
 
-# 创建插件保存目录
-destination_dir="package/A"
-[ -d $destination_dir ] || mkdir -p $destination_dir
-
-# 强制禁用旧版 firewall (fw3)
-sed -i 's/CONFIG_PACKAGE_firewall=y/# CONFIG_PACKAGE_firewall is not set/g' .config
-
-# 强制启用新版 firewall4 (fw4)
-# (先删除旧的设置行，再确保它是y)
-sed -i '/CONFIG_PACKAGE_firewall4/d' .config
-echo "CONFIG_PACKAGE_firewall4=y" >> .config
-
-# D 确保 LuCI 防火墙应用被选中 (它会自动适配 fw4)
-sed -i '/CONFIG_PACKAGE_luci-app-firewall/d' .config
-echo "CONFIG_PACKAGE_luci-app-firewall=y" >> .config
+color cr "更换golang版本"
+rm -rf feeds/packages/lang/golang
+git clone https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
 
 color cy "添加&替换插件"
 
-sed -i "s/ImmortalWrt 24.10-SNAPSHOT.*/EthanWRT R$(TZ=UTC-8 date +'%y.%-m.%-d')/g" package/base-files/files/etc/banner
-
-curl -fsSL "https://raw.githubusercontent.com/waynesg/scripts/refs/heads/main/others/01_sysinfo" -o "target/linux/x86/base-files/lib/preinit/01_sysinfo"
-
-# 显示增加编译时间
-if [ "${REPO_BRANCH#*-}" = "23.05" ]; then
-   sed -i "s/DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION=\"ImmortalWrt R$(TZ=UTC-8 date +'%y.%-m.%-d') (By @Jejz build $(TZ=UTC-8 date '+%Y-%m-%d %H:%M'))\"/g" package/base-files/files/etc/openwrt_release
-   echo -e "\e[41m当前写入的编译时间:\e[0m \e[33m$(grep 'DISTRIB_DESCRIPTION' package/base-files/files/etc/openwrt_release)\e[0m"
-else
-   sed -i "s/DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION=\"ImmortalWrt By @Ethan\"/g" package/base-files/files/etc/openwrt_release
-   sed -i "s/OPENWRT_RELEASE=.*/OPENWRT_RELEASE=\"ImmortalWrt R$(TZ=UTC-8 date +'%y.%-m.%-d') (By @Ethan build $(TZ=UTC-8 date '+%Y-%m-%d %H:%M'))\"/g" package/base-files/files/usr/lib/os-release
-   echo -e "\e[41m当前写入的编译时间:\e[0m \e[33m$(grep 'OPENWRT_RELEASE' package/base-files/files/usr/lib/os-release)\e[0m"
-fi
-
-echo
-TIME y "更换golang版本"
-rm -rf feeds/packages/lang/golang
-git clone https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
+# 创建插件保存目录
+destination_dir="package/A"
+[ -d $destination_dir ] || mkdir -p $destination_dir
 
 # 添加额外插件
 clone_all https://github.com/sbwml/luci-app-openlist2
@@ -278,19 +251,38 @@ clone_all https://github.com/sirpdboy/luci-app-poweroffdevice
 # luci-app-filemanager
 git_clone https://github.com/sbwml/luci-app-filemanager luci-app-filemanager
 
-# 【<--- 新增】 添加 Turbo ACC 网络加速
+# 添加 Turbo ACC 网络加速
 # git_clone https://github.com/kiddin9/kwrt-packages luci-app-turboacc
 
 # 科学上网插件
 clone_all https://github.com/nikkinikki-org/OpenWrt-nikki
 clone_dir https://github.com/vernesong/OpenClash luci-app-openclash
-
 clone_dir https://github.com/kiddin9/kwrt-packages luci-app-v2ray-server
 
 # Themes
 git_clone https://github.com/kiddin9/luci-theme-edge
 git_clone https://github.com/jerrykuku/luci-theme-argon
 git_clone https://github.com/jerrykuku/luci-app-argon-config
+
+
+
+# 强制禁用旧版 firewall (fw3)
+sed -i 's/CONFIG_PACKAGE_firewall=y/# CONFIG_PACKAGE_firewall is not set/g' .config
+
+# 强制启用新版 firewall4 (fw4)
+# (先删除旧的设置行，再确保它是y)
+sed -i '/CONFIG_PACKAGE_firewall4/d' .config
+echo "CONFIG_PACKAGE_firewall4=y" >> .config
+
+# D 确保 LuCI 防火墙应用被选中 (它会自动适配 fw4)
+sed -i '/CONFIG_PACKAGE_luci-app-firewall/d' .config
+echo "CONFIG_PACKAGE_luci-app-firewall=y" >> .config
+
+
+
+
+
+
 
 # 加载个人设置
 begin_time=$(date '+%H:%M:%S')
@@ -332,9 +324,8 @@ cp -f $GITHUB_WORKSPACE/images/bg1.jpg feeds/luci/themes/luci-theme-argon/htdocs
 # 删除主题默认设置
 # find $destination_dir/luci-theme-*/ -type f -name '*luci-theme-*' -print -exec sed -i '/set luci.main.mediaurlbase/d' {} \;
 
-
 echo
-TIME b "菜单 调整..."
+status "菜单 调整..."
 sed -i 's|/services/|/control/|' feeds/luci/applications/luci-app-wol/root/usr/share/luci/menu.d/luci-app-wol.json
 #sed -i 's|/services/|/network/|' feeds/luci/applications/luci-app-nlbwmon/root/usr/share/luci/menu.d/luci-app-nlbwmon.json
 #sed -i 's|/services/|/nas/|' feeds/luci/applications/luci-app-alist/root/usr/share/luci/menu.d/luci-app-openlist2.json
@@ -343,35 +334,16 @@ sed -i 's/("OpenClash"), 50)/("OpenClash"), -10)/g' feeds/luci/applications/luci
 sed -i 's/"网络存储"/"存储"/g' `grep "网络存储" -rl ./`
 sed -i 's/"软件包"/"软件管理"/g' `grep "软件包" -rl ./`
 
-# 【<--- 新增】 移动 OpenList2 到 "网络存储" (nas) 菜单
-# 注意: 你的 clone_all 默认会把它放在 package/A 目录下
-if [ -f "package/A/luci-app-openlist2/luasrc/controller/openlist2.lua" ]; then
-    sed -i 's/{"admin", "services", "openlist2"}/{"admin", "nas", "openlist2"}/g' package/A/luci-app-openlist2/luasrc/controller/openlist2.lua
-fi
-
 # 重命名
 sed -i 's,UPnP IGD 和 PCP,UPnP,g' feeds/luci/applications/luci-app-upnp/po/zh_Hans/upnp.po
-
-# 1. 查找所有匹配的 netdata.lua 文件，并将菜单从 "服务" 移动到 "状态"
-find ./feeds ./package -path "*luci-app-netdata/luasrc/controller/netdata.lua" -exec sed -i \
-    's/{"admin", "services", "netdata"}/{"admin", "status", "netdata"}/g' {} +
-
-# 2. 查找所有匹配的 netdata.lua 文件，并重命名为 "实时监控"
-find ./feeds ./package -path "*luci-app-netdata/luasrc/controller/netdata.lua" -exec sed -i \
-    's/_("Netdata")/_("实时监控")/g' {} +
-    
-# 3. 【优化】为 "实时监控" 菜单设置一个排序（例如 60，使其在“状态”菜单中位置靠前）
-find ./feeds ./package -path "*luci-app-netdata/luasrc/controller/netdata.lua" -exec sed -i \
-    's/"netdata")/"netdata"), 60/g' {} +
-
-echo             
-TIME b "插件 重命名..."
+        
+status "插件 重命名..."
 echo "重命名系统菜单"
 #status menu
 sed -i 's/"概览"/"系统概览"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
 sed -i 's/"路由"/"路由映射"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
 #system menu
-#sed -i 's/"系统"/"系统设置"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
+sed -i 's/"系统"/"系统设置"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
 sed -i 's/"管理权"/"权限管理"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
 sed -i 's/"重启"/"立即重启"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
 sed -i 's/"备份与升级"/"备份升级"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
@@ -399,13 +371,8 @@ sed -i 's/services\///g' feeds/luci/applications/luci-app-nlbwmon/htdocs/luci-st
 
 echo "重命名网络菜单"
 #network
-#sed -i 's/"主机名"/"主机名称"/g' `grep "主机名" -rl ./`
 sed -i 's/"接口"/"网络接口"/g' `grep "接口" -rl ./`
-#sed -i 's/"Socat"/"端口转发"/g'  package/waynesg/luci-app-socat/luasrc/controller/socat.lua
 sed -i 's/DHCP\/DNS/DNS设定/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
-
-# 【<--- 删除】 下面这行被注释掉了，以确保 UPnP 留在“服务”菜单
-# sed -i 's|/services/|/network/|' feeds/luci/applications/luci-app-upnp/root/usr/share/luci/menu.d/luci-app-upnp.json
 
 sed -i 's/"Bandix 流量监控"/"流量监控"/g' package/waynesg/luci-app-bandix/luci-app-bandix/po/zh_Hans/bandix.po
 
@@ -422,11 +389,21 @@ sed -i 's/os.date()/os.date("%a %Y-%m-%d %H:%M:%S")/g' package/emortal/autocore/
 sed -i '$a net.core.wmem_max=16777216' package/base-files/files/etc/sysctl.conf
 sed -i '$a net.core.rmem_max=16777216' package/base-files/files/etc/sysctl.conf
 
-# 【<--- 修改】 调整 V2ray服务器 到 VPN 菜单 (修正路径)
+# 调整 V2ray服务器 到 VPN 菜单 (修正路径)
 if [ -d "package/A/luci-app-v2ray-server" ]; then
     sed -i 's/services/vpn/g' package/A/luci-app-v2ray-server/luasrc/controller/*.lua
     sed -i 's/services/vpn/g' package/A/luci-app-v2ray-server/luasrc/model/cbi/v2ray_server/*.lua
     sed -i 's/services/vpn/g' package/A/luci-app-v2ray-server/luasrc/view/v2ray_server/*.htm
+fi
+
+# 显示增加编译时间
+if [ "${REPO_BRANCH#*-}" = "23.05" ]; then
+   sed -i "s/DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION=\"ImmortalWrt R$(TZ=UTC-8 date +'%y.%-m.%-d') (By @Jejz build $(TZ=UTC-8 date '+%Y-%m-%d %H:%M'))\"/g" package/base-files/files/etc/openwrt_release
+   echo -e "\e[41m当前写入的编译时间:\e[0m \e[33m$(grep 'DISTRIB_DESCRIPTION' package/base-files/files/etc/openwrt_release)\e[0m"
+else
+   sed -i "s/DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION=\"ImmortalWrt By @Ethan\"/g" package/base-files/files/etc/openwrt_release
+   sed -i "s/OPENWRT_RELEASE=.*/OPENWRT_RELEASE=\"ImmortalWrt R$(TZ=UTC-8 date +'%y.%-m.%-d') (By @Ethan build $(TZ=UTC-8 date '+%Y-%m-%d %H:%M'))\"/g" package/base-files/files/usr/lib/os-release
+   echo -e "\e[41m当前写入的编译时间:\e[0m \e[33m$(grep 'OPENWRT_RELEASE' package/base-files/files/usr/lib/os-release)\e[0m"
 fi
 
 # 修复 Makefile 路径
@@ -457,14 +434,6 @@ status "更新配置文件"
     $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
     status "下载openclash运行内核"
 }
-
-# 下载adguardhome运行内核
-# [[ $CLASH_KERNEL =~ amd64|arm64|armv7|armv6|armv5|386 ]] && grep -q "luci-app-adguardhome=y" .config && {
-#     begin_time=$(date '+%H:%M:%S')
-#     chmod +x $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh
-#     $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh $CLASH_KERNEL
-#     status "下载adguardhome运行内核"
-# }
 
 # 下载zsh终端工具
 [[ $ZSH_TOOL = 'true' ]] && grep -q "zsh=y" .config && {
