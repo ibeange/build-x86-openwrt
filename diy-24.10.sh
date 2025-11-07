@@ -239,8 +239,12 @@ destination_dir="package/A"
 # 添加额外插件
 clone_all https://github.com/sbwml/luci-app-openlist2
 clone_all https://github.com/sbwml/luci-app-mosdns
-clone_all https://github.com/brvphoenix/luci-app-wrtbwmon
-clone_all https://github.com/brvphoenix/wrtbwmon
+# clone_all https://github.com/brvphoenix/luci-app-wrtbwmon
+# clone_all https://github.com/brvphoenix/wrtbwmon
+
+# UU游戏加速器
+clone_dir https://github.com/kiddin9/kwrt-packages luci-app-uugamebooster
+clone_dir https://github.com/kiddin9/kwrt-packages uugamebooster
 
 # ddns-go 动态域名
 clone_all https://github.com/sirpdboy/luci-app-ddns-go
