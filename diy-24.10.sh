@@ -237,7 +237,7 @@ destination_dir="package/A"
 [ -d $destination_dir ] || mkdir -p $destination_dir
 
 # 添加额外插件
-clone_all https://github.com/sbwml/luci-app-openlist2
+# clone_all https://github.com/sbwml/luci-app-openlist2
 clone_all https://github.com/sbwml/luci-app-mosdns
 # clone_all https://github.com/brvphoenix/luci-app-wrtbwmon
 # clone_all https://github.com/brvphoenix/wrtbwmon
@@ -268,8 +268,6 @@ git_clone https://github.com/kiddin9/luci-theme-edge
 git_clone https://github.com/jerrykuku/luci-theme-argon
 git_clone https://github.com/jerrykuku/luci-app-argon-config
 
-
-
 # 强制禁用旧版 firewall (fw3)
 sed -i 's/CONFIG_PACKAGE_firewall=y/# CONFIG_PACKAGE_firewall is not set/g' .config
 
@@ -281,12 +279,6 @@ echo "CONFIG_PACKAGE_firewall4=y" >> .config
 # D 确保 LuCI 防火墙应用被选中 (它会自动适配 fw4)
 sed -i '/CONFIG_PACKAGE_luci-app-firewall/d' .config
 echo "CONFIG_PACKAGE_luci-app-firewall=y" >> .config
-
-
-
-
-
-
 
 # 加载个人设置
 begin_time=$(date '+%H:%M:%S')
@@ -333,7 +325,7 @@ status "菜单 调整..."
 sed -i 's|/services/|/control/|' feeds/luci/applications/luci-app-wol/root/usr/share/luci/menu.d/luci-app-wol.json
 #sed -i 's|/services/|/network/|' feeds/luci/applications/luci-app-nlbwmon/root/usr/share/luci/menu.d/luci-app-nlbwmon.json
 #sed -i 's|/services/|/nas/|' feeds/luci/applications/luci-app-alist/root/usr/share/luci/menu.d/luci-app-openlist2.json
-#sed -i '/"title": "Nikki",/a \        "order": -9,' package/waynesg/luci-app-nikki/luci-app-nikki/root/usr/share/luci/menu.d/luci-app-nikki.json
+sed -i '/"title": "Nikki",/a \        "order": -9,' package/waynesg/luci-app-nikki/luci-app-nikki/root/usr/share/luci/menu.d/luci-app-nikki.json
 sed -i 's/("OpenClash"), 50)/("OpenClash"), -10)/g' feeds/luci/applications/luci-app-openclash/luasrc/controller/openclash.lua
 sed -i 's/"网络存储"/"存储"/g' `grep "网络存储" -rl ./`
 sed -i 's/"软件包"/"软件管理"/g' `grep "软件包" -rl ./`
@@ -356,9 +348,9 @@ sed -i 's/"启动项"/"启动管理"/g' feeds/luci/modules/luci-base/po/zh_Hans/
 sed -i 's/"软件包"/"软件管理"/g' feeds/luci/modules/luci-base/po/zh_Hans/base.po
 
 # 【<--- 修改】 修正 Argon-config 重命名的路径
-if [ -f "package/A/luci-app-argon-config/po/zh_Hans/argon-config.po" ]; then
-    sed -i 's/"Argon 主题设置"/"主题设置"/g' package/A/luci-app-argon-config/po/zh_Hans/argon-config.po
-fi
+# if [ -f "package/A/luci-app-argon-config/po/zh_Hans/argon-config.po" ]; then
+#     sed -i 's/"Argon 主题设置"/"主题设置"/g' package/A/luci-app-argon-config/po/zh_Hans/argon-config.po
+# fi
 
 # 精简 UPnP 菜单名称
 sed -i 's#\"title\": \"UPnP IGD \& PCP/NAT-PMP\"#\"title\": \"UPnP服务\"#g' feeds/luci/applications/luci-app-upnp/root/usr/share/luci/menu.d/luci-app-upnp.json
@@ -401,14 +393,10 @@ if [ -d "package/A/luci-app-v2ray-server" ]; then
 fi
 
 # 显示增加编译时间
-if [ "${REPO_BRANCH#*-}" = "23.05" ]; then
-   sed -i "s/DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION=\"ImmortalWrt R$(TZ=UTC-8 date +'%y.%-m.%-d') (By @Jejz build $(TZ=UTC-8 date '+%Y-%m-%d %H:%M'))\"/g" package/base-files/files/etc/openwrt_release
-   echo -e "\e[41m当前写入的编译时间:\e[0m \e[33m$(grep 'DISTRIB_DESCRIPTION' package/base-files/files/etc/openwrt_release)\e[0m"
-else
-   sed -i "s/DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION=\"ImmortalWrt By @Ethan\"/g" package/base-files/files/etc/openwrt_release
-   sed -i "s/OPENWRT_RELEASE=.*/OPENWRT_RELEASE=\"ImmortalWrt R$(TZ=UTC-8 date +'%y.%-m.%-d') (By @Ethan build $(TZ=UTC-8 date '+%Y-%m-%d %H:%M'))\"/g" package/base-files/files/usr/lib/os-release
-   echo -e "\e[41m当前写入的编译时间:\e[0m \e[33m$(grep 'OPENWRT_RELEASE' package/base-files/files/usr/lib/os-release)\e[0m"
-fi
+sed -i "s/DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION=\"ImmortalWrt By @Ethan\"/g" package/base-files/files/etc/openwrt_release
+sed -i "s/OPENWRT_RELEASE=.*/OPENWRT_RELEASE=\"ImmortalWrt R$(TZ=UTC-8 date +'%y.%-m.%-d') (By @Ethan build $(TZ=UTC-8 date '+%Y-%m-%d %H:%M'))\"/g" package/base-files/files/usr/lib/os-release
+echo -e "\e[41m当前写入的编译时间:\e[0m \e[33m$(grep 'OPENWRT_RELEASE' package/base-files/files/usr/lib/os-release)\e[0m"
+
 
 # 修复 Makefile 路径
 find $destination_dir/*/ -maxdepth 2 -path "*/Makefile" | xargs -i sed -i \
