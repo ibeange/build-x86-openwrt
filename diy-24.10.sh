@@ -261,7 +261,7 @@ fi
 echo
 TIME y "更换golang版本"
 rm -rf feeds/packages/lang/golang
-git clone https://github.com/sbwml/packages_lang_golang -b 24.x feeds/packages/lang/golang
+git clone https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
 
 # 添加额外插件
 clone_all https://github.com/sbwml/luci-app-openlist2
